@@ -173,6 +173,18 @@ esp_err_t esp_wireguard_peer_is_up(const wireguard_ctx_t *ctx);
 esp_err_t esp_wireguard_latest_handshake(const wireguard_ctx_t *ctx, time_t *result);
 
 /**
+ * @brief Do a handshake with the peer
+ * @param ctx Context of WireGuard
+ * @param result the output timestamp
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_FAIL if no handshake already completed
+ *      - ESP_ERR_INVALID_ARG if ctx is NULL
+ *      - ESP_ERR_INVALID_STATE if data inside ctx is not valid
+ */
+esp_err_t esp_wireguard_force_handshake(const wireguard_ctx_t *ctx);
+
+/**
  * @brief Add new allowed IP/mask to the list of allowed ip/mask
  * @param ctx Context of WireGuard
  * @param allowed_ip The new IP to be allowed through tunnel

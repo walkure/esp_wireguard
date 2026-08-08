@@ -464,4 +464,29 @@ esp_err_t esp_wireguard_add_allowed_ip(const wireguard_ctx_t *ctx, const char *a
 fail:
     return err;
 }
+
+esp_err_t esp_wireguard_force_handshake(const wireguard_ctx_t *ctx)
+{
+    esp_err_t err;
+    err_t lwip_err;
+
+    if (!ctx)
+    {
+        err = ESP_ERR_INVALID_ARG;
+        goto fail;
+    }
+
+    if (!ctx->netif)
+    {
+        err = ESP_ERR_INVALID_STATE;
+        goto fail;
+    }
+
+    lwip_err = wireguardif_force_handshake(ctx->netif, wireguard_peer_index);
+    err = (lwip_err == ERR_OK ? ESP_OK : ESP_FAIL);
+
+fail:
+    return err;
+}
+
 // vim: expandtab tabstop=4
