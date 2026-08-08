@@ -755,6 +755,17 @@ time_t wireguardif_latest_handshake(struct netif *netif, u8_t peer_index) {
 	return result;
 }
 
+err_t wireguardif_force_handshake(struct netif *netif, u8_t peer_index)
+{
+	struct wireguard_peer *peer;
+	err_t err = wireguardif_lookup_peer(netif, peer_index, &peer);
+	if (err == ERR_OK)
+	{
+		peer->send_handshake = true;
+	}
+	return err;
+}
+
 err_t wireguardif_add_allowed_ip(struct netif *netif, u8_t peer_index, ip_addr_t ip, ip_addr_t mask) {
 	struct wireguard_peer *peer;
 	err_t result = wireguardif_lookup_peer(netif, peer_index, &peer);
