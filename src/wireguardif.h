@@ -44,8 +44,14 @@ extern "C" {
 #include "lwip/netif.h"
 #include "lwip/ip_addr.h"
 
-// Default MTU for WireGuard is 1420 bytes
+// Default MTU for WireGuard is 1420 bytes.
+// Override via build_flags (-D WIREGUARDIF_MTU=xxxx) if the actual path MTU
+// is smaller than the usual 1500-byte-Ethernet assumption this default is
+// based on (1500 - 60 bytes of IPv4/UDP/WireGuard framing = 1440, rounded
+// down to 1420 for safety margin) - e.g. PPPoE or an extra tunnel upstream.
+#ifndef WIREGUARDIF_MTU
 #define WIREGUARDIF_MTU (1420)
+#endif
 
 #define WIREGUARDIF_DEFAULT_PORT		(51820)
 
