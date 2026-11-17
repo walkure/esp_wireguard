@@ -74,6 +74,7 @@ extern "C" {
 #define REKEY_AFTER_TIME			(120)
 #define REJECT_AFTER_TIME			(180)
 #define REKEY_TIMEOUT				(5)
+#define KEEPALIVE_TIMEOUT			(10)
 
 struct wireguard_keypair {
 	bool valid;
@@ -169,6 +170,11 @@ struct wireguard_peer {
 	// last_tx and last_rx of data packets
 	uint32_t last_tx;
 	uint32_t last_rx;
+
+	// Time of the first data packet sent since the last authenticated packet
+	// was received from this peer (0 = nothing outstanding). Used to start a
+	// new handshake when the peer stops answering (whitepaper section 6.2).
+	uint32_t first_unanswered_tx;
 
 	// We set this flag on RX/TX of packets if we think that we should initiate a new handshake
 	bool send_handshake;

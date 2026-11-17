@@ -169,6 +169,10 @@ static err_t wireguardif_output_to_peer(struct netif *netif, struct pbuf *q, con
 					now = wireguard_sys_now();
 					peer->last_tx = now;
 					keypair->last_tx = now;
+					// Keepalives (q == NULL) don't count as data expecting an answer
+					if (q && peer->first_unanswered_tx == 0) {
+						peer->first_unanswered_tx = now ? now : 1;
+					}
 				}
 
 				pbuf_free(pbuf);
@@ -233,6 +237,7 @@ static void wireguardif_process_response_message(struct wireguard_device *device
 		update_peer_addr(peer, addr, port);
 
 		wireguard_start_session(peer, true);
+		peer->first_unanswered_tx = 0;
 		wireguardif_send_keepalive(device, peer);
 
 		// Set the IF-UP flag on netif
@@ -312,6 +317,7 @@ static void wireguardif_process_data_message(struct wireguard_device *device, st
 					now = wireguard_sys_now();
 					keypair->last_rx = now;
 					peer->last_rx = now;
+					peer->first_unanswered_tx = 0;
 
 					// Might need to shuffle next key --> current keypair
 					keypair_update(peer, keypair);
@@ -864,6 +870,15 @@ static bool should_send_initiation(struct wireguard_peer *peer) {
 	return result;
 }
 
+// Whitepaper section 6.2: if data has been sent but nothing authenticated has
+// come back for KEEPALIVE_TIMEOUT + REKEY_TIMEOUT seconds, start a new handshake.
+// Without this, a peer that lost its session (e.g. restarted) is only
+// re-handshaked when our keypair reaches REKEY_AFTER_TIME, up to 120 s later.
+static bool should_handshake_unanswered(struct wireguard_peer *peer) {
+	return (peer->first_unanswered_tx != 0) &&
+		wireguard_expired(peer->first_unanswered_tx, KEEPALIVE_TIMEOUT + REKEY_TIMEOUT);
+}
+
 static bool should_send_keepalive(struct wireguard_peer *peer) {
 	bool result = false;
 	if (peer->keepalive_interval > 0) {
@@ -939,6 +954,11 @@ static void wireguardif_tmr(void *arg) {
 			}
 			if (should_send_keepalive(peer)) {
 				wireguardif_send_keepalive(device, peer);
+			}
+			if (should_handshake_unanswered(peer)) {
+				peer->send_handshake = true;
+				// Re-armed by the next data packet sent, like the Linux implementation
+				peer->first_unanswered_tx = 0;
 			}
 			if (should_send_initiation(peer)) {
 				wireguard_start_handshake(device->netif, peer);
